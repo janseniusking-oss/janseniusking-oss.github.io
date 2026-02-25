@@ -639,32 +639,6 @@
   </div>
 
 
-  <!-- ================================================
-       ADSENSE BANNIÈRE — Remplace ce bloc par ton
-       vrai code AdSense dès approbation Google
-  ================================================ -->
-  <div id="adsense-banner" style="
-    width:100%; max-width:480px;
-    background:var(--card2);
-    border:1px dashed #444;
-    border-radius:var(--radius);
-    padding:10px;
-    text-align:center;
-    font-size:11px;
-    color:var(--muted);
-    margin-bottom:14px;
-  ">
-    📢 Espace publicitaire — AdSense (en attente d'approbation)
-    <!-- COLLE ICI TON CODE ADSENSE QUAND APPROUVÉ
-    <ins class="adsbygoogle"
-         style="display:block"
-         data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-         data-ad-slot="XXXXXXXXXX"
-         data-ad-format="auto"
-         data-full-width-responsive="true"></ins>
-    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
-    -->
-  </div>
   <!-- Sondage -->
   <div class="survey-msg blink">
     ⚠️ SONDAGE À VENIR pour décider de la prochaine récompense<br>
@@ -693,6 +667,50 @@
   </div>
 
   <!-- Navigation -->
+
+  <!-- ================================================
+       SEMAINE DE RETRAIT — Compte à rebours
+  ================================================ -->
+  <div class="card" id="withdrawal-card">
+    <!-- État : fenêtre FERMÉE -->
+    <div id="withdrawal-closed">
+      <div class="section-title">🔒 Fenêtre de retrait</div>
+      <div style="font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.6;">
+        La prochaine fenêtre de retrait n'est pas encore ouverte.<br>
+        Suivez nos réseaux sociaux pour être notifié.
+      </div>
+      <div style="
+        background:#1a1a1a; border-radius:10px; padding:14px;
+        text-align:center; border:1px solid #333;
+      ">
+        <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">PROCHAINE OUVERTURE</div>
+        <div id="countdown-display" style="
+          font-size:28px; font-weight:900; color:var(--gold);
+          letter-spacing:2px; font-family:monospace;
+        ">--j --h --m --s</div>
+      </div>
+    </div>
+
+    <!-- État : fenêtre OUVERTE -->
+    <div id="withdrawal-open" class="hidden">
+      <div class="section-title" style="color:var(--green);">✅ Fenêtre de retrait OUVERTE</div>
+      <div style="font-size:13px; color:var(--muted); margin-bottom:10px; line-height:1.6;">
+        🎉 La semaine de retrait est active !<br>
+        Tu as jusqu'à la fin de cette période pour retirer.
+      </div>
+      <div style="
+        background:rgba(46,204,113,.1); border-radius:10px; padding:14px;
+        text-align:center; border:1px solid rgba(46,204,113,.3);
+      ">
+        <div style="font-size:11px; color:var(--green); margin-bottom:8px;">FERMETURE DANS</div>
+        <div id="countdown-close-display" style="
+          font-size:28px; font-weight:900; color:var(--green);
+          letter-spacing:2px; font-family:monospace;
+        ">--j --h --m --s</div>
+      </div>
+    </div>
+  </div>
+
   <div class="nav-grid">
     <button class="btn btn-dark" onclick="afficherPage('page-rewards')">🎁 Récompenses</button>
     <button class="btn btn-dark" onclick="afficherPage('page-cgu')">📄 CGU</button>
@@ -774,8 +792,32 @@
     <p style="font-size:13px; color:var(--muted); margin-top:4px;">
       Ton solde : <strong id="rewards-gold" style="color:var(--gold)">0</strong> gold
     </p>
-    <button class="btn btn-green" style="margin-top:14px;" onclick="retirerRecompense()">
-      Retirer 800 Robux
+
+    <!-- Champ pseudo Roblox -->
+    <div style="margin-top:14px;">
+      <label style="font-size:12px; color:var(--muted); display:block; margin-bottom:6px;">
+        👤 Ton pseudo Roblox (obligatoire)
+      </label>
+      <input
+        id="roblox-username"
+        type="text"
+        placeholder="Entre ton pseudo Roblox..."
+        style="
+          width:100%; padding:12px 14px;
+          background:var(--card); border:1px solid #444;
+          border-radius:10px; color:var(--text);
+          font-family:inherit; font-size:14px;
+          outline:none; transition:border-color .2s;
+        "
+        oninput="this.style.borderColor=this.value.length>2?'var(--green)':'#444'"
+      />
+      <p style="font-size:11px; color:var(--muted); margin-top:5px;">
+        ⚠️ Vérifie bien ton pseudo — les Robux seront envoyés à ce compte.
+      </p>
+    </div>
+
+    <button class="btn btn-green" id="btn-retrait" style="margin-top:12px;" onclick="retirerRecompense()">
+      🔒 Retrait fermé ce mois-ci
     </button>
     <div id="reward-msg" class="reward-msg hidden"></div>
   </div>
@@ -1048,6 +1090,7 @@ onAuthStateChanged(auth, async (user) => {
     });
 
     afficherPage('page-dashboard');
+    initWithdrawalSystem(); // Vérifier la fenêtre de retrait
 
   } else {
     currentUser = null;
@@ -1063,17 +1106,34 @@ onAuthStateChanged(auth, async (user) => {
 let pubEnCours = false;
 
 function regarderPub() {
-  // Lance la pub Monetag + donne 20 gold immédiatement
-  ajouterGold(20);
-  showToast('✅ +20 gold !', 'gold');
+  const btn = document.getElementById('btn-pub');
+  if (btn.disabled) return;
 
-  // Déclenche le popunder Monetag en arrière-plan
+  // Désactiver le bouton pendant la pub
+  btn.disabled = true;
+  btn.textContent = '⏳ 10s...';
+
+  // Lancer la pub Monetag
   try {
     const s = document.createElement('script');
     s.dataset.zone = '10652233';
     s.src = 'https://nap5k.com/tag.min.js';
     document.body.appendChild(s);
   } catch(e) {}
+
+  // Countdown 10s puis donner le gold
+  let secs = 10;
+  const timer = setInterval(async () => {
+    secs--;
+    btn.textContent = '⏳ ' + secs + 's...';
+    if (secs <= 0) {
+      clearInterval(timer);
+      await ajouterGold(20);
+      showToast('✅ +20 gold !', 'gold');
+      btn.disabled = false;
+      btn.textContent = '📺 Regarder pub (+20 gold)';
+    }
+  }, 1000);
 }
 window.regarderPub = regarderPub;
 
@@ -1406,27 +1466,174 @@ function initSnake() {
   snakeTimer = setInterval(step, 130);
 }
 
+
+/* ====================================================
+   SYSTÈME SEMAINE DE RETRAIT
+
+   Pour activer une fenêtre depuis Firebase Console :
+   Collection : config
+   Document   : withdrawal
+   Champs :
+     openDate  : timestamp (date d'ouverture)
+     closeDate : timestamp (date de fermeture)
+     active    : boolean  (true = fenêtre ouverte)
+==================================================== */
+let withdrawalActive = false;
+
+async function initWithdrawalSystem() {
+  try {
+    const ref  = doc(db, 'config', 'withdrawal');
+    const snap = await getDoc(ref);
+
+    if (!snap.exists()) {
+      _setWithdrawalUI(false, null);
+      return;
+    }
+
+    const data      = snap.data();
+    const now       = new Date();
+    const openDate  = data.openDate  ? data.openDate.toDate()  : null;
+    const closeDate = data.closeDate ? data.closeDate.toDate() : null;
+    const active    = data.active === true;
+
+    if (active && openDate && closeDate && now >= openDate && now <= closeDate) {
+      withdrawalActive = true;
+      _setWithdrawalUI(true, closeDate);
+      _startCountdown(closeDate, 'countdown-close-display', () => {
+        withdrawalActive = false;
+        _setWithdrawalUI(false, null);
+      });
+    } else {
+      withdrawalActive = false;
+      _setWithdrawalUI(false, openDate);
+      if (openDate && now < openDate) {
+        _startCountdown(openDate, 'countdown-display', () => {
+          initWithdrawalSystem();
+        });
+      }
+    }
+  } catch(e) {
+    console.warn('Erreur withdrawal:', e);
+    _setWithdrawalUI(false, null);
+  }
+}
+
+function _setWithdrawalUI(isOpen) {
+  const closedDiv  = document.getElementById('withdrawal-closed');
+  const openDiv    = document.getElementById('withdrawal-open');
+  const btnRetrait = document.getElementById('btn-retrait');
+
+  if (isOpen) {
+    if (closedDiv) closedDiv.classList.add('hidden');
+    if (openDiv)   openDiv.classList.remove('hidden');
+    if (btnRetrait) {
+      btnRetrait.disabled = false;
+      btnRetrait.style.opacity = '1';
+      btnRetrait.textContent = '🎁 Retirer 800 Robux';
+    }
+  } else {
+    if (closedDiv) closedDiv.classList.remove('hidden');
+    if (openDiv)   openDiv.classList.add('hidden');
+    if (btnRetrait) {
+      btnRetrait.disabled = true;
+      btnRetrait.style.opacity = '0.4';
+      btnRetrait.textContent = '🔒 Retrait fermé ce mois-ci';
+    }
+  }
+}
+
+function _startCountdown(targetDate, elementId, onFinish) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  function update() {
+    const diff = targetDate - new Date();
+    if (diff <= 0) {
+      el.textContent = '00j 00h 00m 00s';
+      if (onFinish) onFinish();
+      return;
+    }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000)  / 60000);
+    const s = Math.floor((diff % 60000)    / 1000);
+    el.textContent =
+      String(d).padStart(2,'0') + 'j ' +
+      String(h).padStart(2,'0') + 'h ' +
+      String(m).padStart(2,'0') + 'm ' +
+      String(s).padStart(2,'0') + 's';
+    setTimeout(update, 1000);
+  }
+  update();
+}
+
 /* ================================================
    RÉCOMPENSES
 ================================================ */
 async function retirerRecompense() {
-  const msg = document.getElementById('reward-msg');
+  const msg      = document.getElementById('reward-msg');
+  const robloxEl = document.getElementById('roblox-username');
+  const pseudo   = robloxEl ? robloxEl.value.trim() : '';
+  const DISCORD  = 'https://discord.gg/QFj7sZtM8f';
+
   msg.classList.remove('hidden', 'ok', 'err');
+
+  if (!withdrawalActive) {
+    msg.classList.add('err');
+    msg.textContent = '🔒 La fenêtre de retrait n\'est pas ouverte ce mois-ci.';
+    setTimeout(() => msg.classList.add('hidden'), 5000);
+    return;
+  }
+
+  if (!pseudo || pseudo.length < 3) {
+    msg.classList.add('err');
+    msg.textContent = '⚠️ Entre ton pseudo Roblox avant de retirer.';
+    if (robloxEl) robloxEl.focus();
+    setTimeout(() => msg.classList.add('hidden'), 4000);
+    return;
+  }
 
   if (gold < 5000) {
     msg.classList.add('err');
-    msg.textContent =
-      '❌ Gold insuffisant ! Il te faut 5 000 gold'
-      + ' (tu en as ' + gold.toLocaleString('fr-FR') + ').';
-  } else {
-    await ajouterGold(-5000);
-    msg.classList.add('ok');
-    msg.textContent =
-      '✅ Retrait demandé ! Tu recevras tes Robux'
-      + ' durant la fenêtre mensuelle (24–48 h).';
+    msg.textContent = '❌ Gold insuffisant ! Il te faut 5 000 gold (tu en as ' + gold.toLocaleString('fr-FR') + ').';
+    setTimeout(() => msg.classList.add('hidden'), 5000);
+    return;
   }
 
-  setTimeout(() => msg.classList.add('hidden'), 5000);
+  // ✅ Tout OK — traiter le retrait
+  const btn = document.getElementById('btn-retrait');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Traitement...'; }
+
+  await ajouterGold(-5000);
+
+  // Sauvegarder dans Firestore collection withdrawals
+  try {
+    await setDoc(doc(db, 'withdrawals', currentUser.uid + '_' + Date.now()), {
+      uid:          currentUser.uid,
+      email:        currentUser.email,
+      displayName:  currentUser.displayName,
+      robloxPseudo: pseudo,
+      goldSpent:    5000,
+      reward:       '800 Robux',
+      status:       'pending',
+      requestedAt:  serverTimestamp()
+    });
+  } catch(e) {
+    console.warn('Erreur sauvegarde retrait:', e);
+  }
+
+  if (robloxEl) robloxEl.value = '';
+
+  // Message succès avec lien Discord
+  msg.classList.add('ok');
+  msg.innerHTML =
+    '✅ Demande envoyée pour <strong>' + pseudo + '</strong> !<br><br>' +
+    '📩 Rejoins notre Discord pour suivre ta récompense :<br>' +
+    '<a href="' + DISCORD + '" target="_blank" style="color:#5865F2;font-weight:700;text-decoration:underline;">' + DISCORD + '</a><br><br>' +
+    '⏱ Tes 800 Robux seront envoyés sous 24–48h.';
+
+  setTimeout(() => msg.classList.add('hidden'), 15000);
+  if (btn) { btn.textContent = '✅ Retrait demandé ce mois'; }
 }
 window.retirerRecompense = retirerRecompense;
 
