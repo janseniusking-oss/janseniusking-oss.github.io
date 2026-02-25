@@ -761,8 +761,8 @@
 
   <div class="reward-card">
     <div class="reward-price">5 000 gold = 800 Robux</div>
-    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Roblox_gift_card.jpg/320px-Roblox_gift_card.jpg"
-         onerror="this.src='https://placehold.co/180x112/cc0000/ffffff?text=Roblox+Gift+Card'"
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='175' viewBox='0 0 280 175'%3E%3Crect width='280' height='175' rx='14' fill='%23cc0000'/%3E%3Crect x='10' y='10' width='260' height='155' rx='10' fill='none' stroke='%23ff4444' stroke-width='2' opacity='0.5'/%3E%3Ccircle cx='50' cy='60' r='28' fill='%23ffffff' opacity='0.15'/%3E%3Ccircle cx='50' cy='60' r='18' fill='%23ffffff' opacity='0.2'/%3E%3Ctext x='50' y='67' text-anchor='middle' font-size='20' font-weight='900' font-family='Arial,sans-serif' fill='white'%3ER%3C/text%3E%3Ctext x='105' y='52' font-size='22' font-weight='900' font-family='Arial,sans-serif' fill='white'%3EROBLOX%3C/text%3E%3Ctext x='105' y='75' font-size='13' font-family='Arial,sans-serif' fill='%23ffcccc'%3EGift Card%3C/text%3E%3Crect x='20' y='105' width='240' height='50' rx='8' fill='%23000000' opacity='0.3'/%3E%3Ctext x='140' y='126' text-anchor='middle' font-size='11' font-family='Arial,sans-serif' fill='%23ffcccc'%3EValeur de la carte%3C/text%3E%3Ctext x='140' y='147' text-anchor='middle' font-size='20' font-weight='900' font-family='Arial,sans-serif' fill='white'%3E800 Robux%3C/text%3E%3C/svg%3E"
+         alt="Carte cadeau Roblox 800 Robux"
          alt="Carte Roblox"
          onerror="this.style.display='none'" />
     <div class="reward-window-box">
@@ -1065,38 +1065,52 @@ let pubEnCours = false;
 async function regarderPub() {
   if (pubEnCours) return;
   pubEnCours = true;
-  const btn = document.getElementById('btn-pub');
-  btn.disabled    = true;
-  btn.textContent = '⏳ Pub en cours... (5s)';
 
-  // Déclencher le Popunder Monetag (zone 10652233)
-  // Le popunder s'ouvre dans un nouvel onglet automatiquement
+  const btn = document.getElementById('btn-pub');
+  const DUREE = 10; // secondes de visionnage obligatoire
+  btn.disabled = true;
+
+  // Déclencher le Popunder Monetag (s'ouvre en arrière-plan)
   try {
-    const tagScript = document.createElement('script');
-    tagScript.dataset.zone = '10652233';
-    tagScript.src = 'https://nap5k.com/tag.min.js';
-    document.body.appendChild(tagScript);
+    const s = document.createElement('script');
+    s.dataset.zone = '10652233';
+    s.src = 'https://nap5k.com/tag.min.js';
+    document.body.appendChild(s);
   } catch(e) {
-    console.warn('Monetag popunder:', e);
+    console.warn('Monetag:', e);
   }
 
-  // Simuler 5s de visionnage puis donner le gold
-  let secsLeft = 5;
-  const countdown = setInterval(() => {
+  // Countdown visible — gold donné UNIQUEMENT à la fin
+  let secsLeft = DUREE;
+  btn.textContent = '⏳ Regarde la pub... ' + secsLeft + 's';
+
+  const countdown = setInterval(async () => {
     secsLeft--;
-    btn.textContent = '⏳ Pub en cours... (' + secsLeft + 's)';
+    btn.textContent = '⏳ Regarde la pub... ' + secsLeft + 's';
+
     if (secsLeft <= 0) {
       clearInterval(countdown);
+
+      // ✅ Gold donné ici — après les 10s complètes
+      await ajouterGold(20);
+      showToast('✅ +20 gold ! Merci d'avoir regardé.', 'gold');
+
+      // Cooldown 30s avant de pouvoir relancer
+      let cooldown = 30;
+      btn.textContent = '⏳ Prochaine pub dans ' + cooldown + 's';
+
+      const cdTimer = setInterval(() => {
+        cooldown--;
+        btn.textContent = '⏳ Prochaine pub dans ' + cooldown + 's';
+        if (cooldown <= 0) {
+          clearInterval(cdTimer);
+          btn.disabled    = false;
+          btn.textContent = '📺 Regarder pub (+20 gold)';
+          pubEnCours      = false;
+        }
+      }, 1000);
     }
   }, 1000);
-
-  setTimeout(async () => {
-    await ajouterGold(20);
-    btn.disabled    = false;
-    btn.textContent = '📺 Regarder pub (+20 gold)';
-    pubEnCours      = false;
-    showToast('✅ +20 gold ! Pub terminée.', 'gold');
-  }, 5000);
 }
 window.regarderPub = regarderPub;
 
